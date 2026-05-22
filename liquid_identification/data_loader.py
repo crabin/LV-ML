@@ -202,3 +202,8 @@ def _label_to_csv_stem(label: str) -> str:
         if known_label == label:
             return Path(filename).stem
     return label
+
+
+if __name__ == "__main__":
+    data = load_all_raw_data()
+    print(data.head())
