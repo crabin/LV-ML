@@ -64,3 +64,38 @@ is_outlier, amplitude_denoised_dbm, amplitude_smoothed_dbm, amplitude_normalized
 ```text
 data/processed/preprocessed_spectra.csv
 ```
+
+## 关键频段分析
+
+关键频段分析按 `docs/实验步骤.md` 中第 5 节执行，默认关注：
+
+```text
+180-220 MHz
+270-300 MHz
+```
+
+分析内容包括：
+
+- 不同液体在关键频段的均值差异
+- 峰值位置和谷值位置
+- 曲线斜率
+- 频段能量
+- 类间 RMS 距离
+- 区分度较高的频率点
+- 探索性 ANOVA
+
+```python
+from liquid_identification.key_frequency_analysis import (
+    analyze_key_frequency_bands,
+    save_key_frequency_analysis,
+)
+
+analysis = analyze_key_frequency_bands(processed_data)
+save_key_frequency_analysis(analysis)
+```
+
+默认保存路径：
+
+```text
+data/analysis/key_frequency_*.csv
+```
