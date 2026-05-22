@@ -19,6 +19,11 @@ from liquid_identification.preprocessing import (
     preprocess_spectrum_data,
     save_preprocessed_data,
 )
+from liquid_identification.visualization_analysis import (
+    build_liquid_feature_matrix,
+    build_visualization_report,
+    run_visualization_analysis,
+)
 
 __all__ = [
     "LIQUID_LABELS",
@@ -26,7 +31,9 @@ __all__ = [
     "PreprocessingConfig",
     "analyze_key_frequency_bands",
     "build_key_frequency_report",
+    "build_liquid_feature_matrix",
     "build_preprocessing_report",
+    "build_visualization_report",
     "find_data_dir",
     "load_all_raw_data",
     "load_combined_range_data",
@@ -34,4 +41,5 @@ __all__ = [
     "preprocess_spectrum_data",
     "save_key_frequency_analysis",
     "save_preprocessed_data",
+    "run_visualization_analysis",
 ]

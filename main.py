@@ -9,6 +9,10 @@ from liquid_identification.preprocessing import (
     preprocess_spectrum_data,
     save_preprocessed_data,
 )
+from liquid_identification.visualization_analysis import (
+    build_visualization_report,
+    run_visualization_analysis,
+)
 
 
 def main():
@@ -23,6 +27,10 @@ def main():
     print(build_key_frequency_report(key_frequency_analysis))
     analysis_dir = save_key_frequency_analysis(key_frequency_analysis)
     print(f"\n关键频段分析结果已保存: {analysis_dir}")
+
+    visualization_result = run_visualization_analysis(processed)
+    print()
+    print(build_visualization_report(visualization_result))
 
 
 if __name__ == "__main__":

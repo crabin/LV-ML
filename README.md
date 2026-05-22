@@ -99,3 +99,24 @@ save_key_frequency_analysis(analysis)
 ```text
 data/analysis/key_frequency_*.csv
 ```
+
+## 数据分析与可视化
+
+数据分析与可视化按 `docs/实验步骤.md` 中第 6 节执行：
+
+- 曲线可视化：原始曲线、平滑后曲线、Normalize 后曲线
+- PCA：2D 分布图、3D 分布图、各主成分解释方差比例
+- t-SNE：2D 非线性降维分布图
+- 相关性分析：频率相关性热力图、高相关特征对
+
+```python
+from liquid_identification.visualization_analysis import run_visualization_analysis
+
+result = run_visualization_analysis(processed_data)
+```
+
+默认保存路径：
+
+```text
+data/analysis/visualization/
+```
