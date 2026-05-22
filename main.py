@@ -1,18 +1,17 @@
 from liquid_identification.data_loader import load_all_raw_data
+from liquid_identification.preprocessing import (
+    build_preprocessing_report,
+    preprocess_spectrum_data,
+    save_preprocessed_data,
+)
 
 
 def main():
     data = load_all_raw_data()
-    summary = (
-        data.groupby(["range", "liquid_type"], observed=True)
-        .agg(
-            rows=("amplitude_dbm", "size"),
-            min_mhz=("frequency_mhz", "min"),
-            max_mhz=("frequency_mhz", "max"),
-        )
-        .reset_index()
-    )
-    print(summary.to_string(index=False))
+    processed = preprocess_spectrum_data(data)
+    print(build_preprocessing_report(data, processed))
+    output_path = save_preprocessed_data(processed)
+    print(f"\n预处理数据已保存: {output_path}")
 
 
 if __name__ == "__main__":
