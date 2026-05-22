@@ -106,7 +106,7 @@ data/analysis/key_frequency_*.csv
 
 - 曲线可视化：原始曲线、平滑后曲线、Normalize 后曲线
 - PCA：2D 分布图、3D 分布图、各主成分解释方差比例
-- t-SNE：2D 非线性降维分布图
+- t-SNE / UMAP：2D 非线性降维分布图
 - 相关性分析：频率相关性热力图、高相关特征对
 
 ```python

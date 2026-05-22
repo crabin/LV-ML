@@ -13,6 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
+from umap import UMAP
 
 from liquid_identification.data_loader import find_data_dir
 
@@ -29,7 +30,7 @@ def run_visualization_analysis(
     processed_data: pd.DataFrame,
     output_dir: str | Path | None = None,
 ) -> dict[str, object]:
-    """Create spectrum plots, PCA/t-SNE projections and correlation analysis."""
+    """Create spectrum plots, PCA/t-SNE/UMAP projections and correlation analysis."""
     if output_dir is None:
         output_dir = find_data_dir() / "analysis" / "visualization"
 
@@ -61,6 +62,15 @@ def run_visualization_analysis(
         path / "tsne_2d.png",
     )
 
+    umap_scores = _run_umap(feature_matrix)
+    figure_paths["umap_2d"] = _plot_projection_2d(
+        umap_scores,
+        "umap_1",
+        "umap_2",
+        "UMAP 2D projection",
+        path / "umap_2d.png",
+    )
+
     correlation = _compute_frequency_correlation(feature_matrix)
     high_correlation_pairs = _find_high_correlation_pairs(correlation)
     figure_paths["frequency_correlation"] = _plot_correlation_heatmap(
@@ -74,6 +84,7 @@ def run_visualization_analysis(
         "pca_scores": pca_scores,
         "pca_explained_variance": explained_variance,
         "tsne_scores": tsne_scores,
+        "umap_scores": umap_scores,
         "frequency_correlation": correlation,
         "high_correlation_pairs": high_correlation_pairs,
     }
@@ -132,10 +143,11 @@ def build_visualization_report(result: dict[str, object]) -> str:
             },
         ),
         "",
-        "3. t-SNE 分析",
+        "3. t-SNE / UMAP 分析",
         "输出: t-SNE 2D 分布图。",
         "理由: 当 PCA 线性降维分离不明显时，t-SNE 可用于探索非线性可分性。当前样本数较少，结果只作为可视化参考。",
-        "UMAP: 当前环境未安装 umap-learn，因此本轮未执行 UMAP，避免引入额外依赖改变实验环境。",
+        "输出: UMAP 2D 分布图。",
+        "理由: UMAP 同样用于探索非线性流形结构，通常比 t-SNE 更利于保留局部邻域关系；当前样本数较少，结果只作为可视化参考。",
         "",
         "4. 相关性分析",
         "输出: 频率相关性热力图和高相关特征对列表。",
@@ -260,6 +272,24 @@ def _run_tsne(feature_matrix: pd.DataFrame) -> pd.DataFrame:
         coordinates,
         index=feature_matrix.index,
         columns=["tsne_1", "tsne_2"],
+    ).reset_index()
+
+
+def _run_umap(feature_matrix: pd.DataFrame) -> pd.DataFrame:
+    scaled = StandardScaler().fit_transform(feature_matrix)
+    n_neighbors = min(5, feature_matrix.shape[0] - 1)
+    reducer = UMAP(
+        n_components=2,
+        n_neighbors=n_neighbors,
+        min_dist=0.1,
+        metric="euclidean",
+        random_state=42,
+    )
+    coordinates = reducer.fit_transform(scaled)
+    return pd.DataFrame(
+        coordinates,
+        index=feature_matrix.index,
+        columns=["umap_1", "umap_2"],
     ).reset_index()
 
 
