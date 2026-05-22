@@ -1,4 +1,14 @@
 from liquid_identification.data_loader import load_all_raw_data
+from liquid_identification.dataset_split import (
+    build_dataset_split_report,
+    save_dataset_splits,
+    split_all_feature_sets,
+)
+from liquid_identification.feature_extraction import (
+    build_feature_extraction_report,
+    extract_all_feature_sets,
+    save_feature_sets,
+)
 from liquid_identification.key_frequency_analysis import (
     analyze_key_frequency_bands,
     build_key_frequency_report,
@@ -31,6 +41,18 @@ def main():
     visualization_result = run_visualization_analysis(processed)
     print()
     print(build_visualization_report(visualization_result))
+
+    feature_sets = extract_all_feature_sets(processed)
+    feature_dir = save_feature_sets(feature_sets)
+    print()
+    print(build_feature_extraction_report(feature_sets))
+    print(f"\n特征文件已保存: {feature_dir}")
+
+    dataset_splits = split_all_feature_sets(feature_sets)
+    split_dir = save_dataset_splits(dataset_splits)
+    print()
+    print(build_dataset_split_report(dataset_splits))
+    print(f"\n数据集划分文件已保存: {split_dir}")
 
 
 if __name__ == "__main__":

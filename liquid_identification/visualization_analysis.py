@@ -24,6 +24,10 @@ CURVE_COLUMNS: dict[str, str] = {
     "smoothed": "amplitude_smoothed_dbm",
     "normalized": "amplitude_normalized",
 }
+CORRELATION_THRESHOLD = 0.98
+CORRELATION_HEATMAP_MAX_FEATURES = 180
+MIN_PAIR_DISTANCE_MHZ = 5.0
+HIGH_CORRELATION_PAIR_LIMIT = 2000
 
 
 def run_visualization_analysis(
@@ -71,10 +75,22 @@ def run_visualization_analysis(
         path / "umap_2d.png",
     )
 
-    correlation = _compute_frequency_correlation(feature_matrix)
-    high_correlation_pairs = _find_high_correlation_pairs(correlation)
+    correlation_features = _select_correlation_heatmap_features(feature_info)
+    correlation = feature_matrix.loc[:, correlation_features].corr()
+    full_correlation = feature_matrix.corr()
+    high_correlation_pairs = _find_high_correlation_pairs(
+        full_correlation,
+        feature_info,
+        threshold=CORRELATION_THRESHOLD,
+    )
+    selected_features = _select_representative_features(
+        feature_matrix,
+        feature_info,
+        threshold=CORRELATION_THRESHOLD,
+    )
     figure_paths["frequency_correlation"] = _plot_correlation_heatmap(
         correlation,
+        feature_info,
         path / "frequency_correlation_heatmap.png",
     )
 
@@ -86,6 +102,7 @@ def run_visualization_analysis(
         "tsne_scores": tsne_scores,
         "umap_scores": umap_scores,
         "frequency_correlation": correlation,
+        "selected_frequency_features": selected_features,
         "high_correlation_pairs": high_correlation_pairs,
     }
     for name, frame in tables.items():
@@ -109,6 +126,11 @@ def build_visualization_report(result: dict[str, object]) -> str:
     explained_variance = tables["pca_explained_variance"]
     pca_scores = tables["pca_scores"]
     high_correlation_pairs = tables["high_correlation_pairs"]
+    selected_features = tables["selected_frequency_features"]
+    top_selected_features = selected_features.sort_values(
+        "feature_std",
+        ascending=False,
+    ).head(20)
 
     top_pca = pca_scores.sort_values("pc1").loc[
         :,
@@ -150,12 +172,28 @@ def build_visualization_report(result: dict[str, object]) -> str:
         "理由: UMAP 同样用于探索非线性流形结构，通常比 t-SNE 更利于保留局部邻域关系；当前样本数较少，结果只作为可视化参考。",
         "",
         "4. 相关性分析",
-        "输出: 频率相关性热力图和高相关特征对列表。",
-        "理由: 识别高度相关的频率点，后续特征提取时可以减少冗余特征。",
-        "高相关特征对 Top 10",
+        "输出: 降采样后的全频段相关性热力图、高相关特征对、代表频点筛选表。",
+        "理由: 原始 2253 个频率点直接画热力图不可读，相邻频点高相关也会淹没有用信息；先按频段均匀抽样绘制热力图，再用相关阈值筛出代表频点，更适合后续特征提取。",
+        f"代表频点筛选: 使用 |corr| >= {CORRELATION_THRESHOLD:.2f} 作为冗余阈值，从 {feature_matrix.shape[1]} 个频率特征筛为 {len(selected_features)} 个代表特征。",
+        f"高相关特征对: 仅保存绝对相关性最高的前 {HIGH_CORRELATION_PAIR_LIMIT} 对，避免输出被大量重复关系淹没。",
+        "代表频点 Top 20，按跨液体标准差排序",
+        top_selected_features.to_string(
+            index=False,
+            formatters={
+                "frequency_mhz": "{:.3f}".format,
+                "feature_std": "{:.4f}".format,
+            },
+        ),
+        "",
+        f"非相邻高相关特征对 Top 10，已过滤小于 {MIN_PAIR_DISTANCE_MHZ:g} MHz 的相邻关系",
         high_correlation_pairs.head(10).to_string(
             index=False,
-            formatters={"correlation": "{:.4f}".format},
+            formatters={
+                "correlation": "{:.4f}".format,
+                "frequency_a_mhz": "{:.3f}".format,
+                "frequency_b_mhz": "{:.3f}".format,
+                "distance_mhz": "{:.3f}".format,
+            },
         ),
         "",
         f"结果目录: {result['output_dir']}",
@@ -337,34 +375,126 @@ def _plot_projection_2d(
     return output_path
 
 
-def _compute_frequency_correlation(feature_matrix: pd.DataFrame) -> pd.DataFrame:
-    top_features = feature_matrix.std(axis=0).sort_values(ascending=False).head(80).index
-    return feature_matrix.loc[:, top_features].corr()
+def _select_correlation_heatmap_features(feature_info: pd.DataFrame) -> list[str]:
+    features: list[str] = []
+    for _, group in feature_info.groupby("range", sort=False):
+        ordered = group.sort_values("frequency_mhz")
+        keep_count = min(len(ordered), CORRELATION_HEATMAP_MAX_FEATURES // 3)
+        positions = np.linspace(0, len(ordered) - 1, keep_count).round().astype(int)
+        features.extend(ordered.iloc[positions]["feature_name"].tolist())
+    return features
 
 
-def _find_high_correlation_pairs(correlation: pd.DataFrame) -> pd.DataFrame:
+def _find_high_correlation_pairs(
+    correlation: pd.DataFrame,
+    feature_info: pd.DataFrame,
+    *,
+    threshold: float,
+) -> pd.DataFrame:
+    feature_lookup = feature_info.set_index("feature_name")
     rows: list[dict[str, float | str]] = []
     columns = list(correlation.columns)
     for left_index, feature_a in enumerate(columns):
         for feature_b in columns[left_index + 1 :]:
             corr = correlation.loc[feature_a, feature_b]
+            if abs(corr) < threshold:
+                continue
+
+            range_a = feature_lookup.loc[feature_a, "range"]
+            range_b = feature_lookup.loc[feature_b, "range"]
+            frequency_a = float(feature_lookup.loc[feature_a, "frequency_mhz"])
+            frequency_b = float(feature_lookup.loc[feature_b, "frequency_mhz"])
+            distance_mhz = abs(frequency_a - frequency_b)
+            if range_a == range_b and distance_mhz < MIN_PAIR_DISTANCE_MHZ:
+                continue
+
             rows.append(
                 {
                     "feature_a": feature_a,
                     "feature_b": feature_b,
+                    "range_a": range_a,
+                    "range_b": range_b,
+                    "frequency_a_mhz": frequency_a,
+                    "frequency_b_mhz": frequency_b,
+                    "distance_mhz": distance_mhz,
                     "correlation": corr,
                     "abs_correlation": abs(corr),
                 }
             )
+    if not rows:
+        return pd.DataFrame(
+            columns=[
+                "feature_a",
+                "feature_b",
+                "range_a",
+                "range_b",
+                "frequency_a_mhz",
+                "frequency_b_mhz",
+                "distance_mhz",
+                "correlation",
+                "abs_correlation",
+            ]
+        )
     return (
         pd.DataFrame(rows)
         .sort_values("abs_correlation", ascending=False)
+        .head(HIGH_CORRELATION_PAIR_LIMIT)
         .reset_index(drop=True)
     )
 
 
-def _plot_correlation_heatmap(correlation: pd.DataFrame, output_path: Path) -> Path:
-    fig, ax = plt.subplots(figsize=(12, 10), constrained_layout=True)
+def _select_representative_features(
+    feature_matrix: pd.DataFrame,
+    feature_info: pd.DataFrame,
+    *,
+    threshold: float,
+) -> pd.DataFrame:
+    feature_std = feature_matrix.std(axis=0)
+    candidates = feature_info.copy()
+    candidates["feature_std"] = candidates["feature_name"].map(feature_std)
+    candidates = candidates.sort_values(
+        ["feature_std", "range", "frequency_mhz"],
+        ascending=[False, True, True],
+    )
+
+    selected_rows: list[pd.Series] = []
+    selected_features: list[str] = []
+    for _, row in candidates.iterrows():
+        feature_name = row["feature_name"]
+        if not selected_features:
+            row = row.copy()
+            row["selection_priority"] = len(selected_features) + 1
+            selected_rows.append(row)
+            selected_features.append(feature_name)
+            continue
+
+        correlations = feature_matrix[selected_features].corrwith(
+            feature_matrix[feature_name]
+        )
+        if correlations.abs().max() < threshold:
+            row = row.copy()
+            row["selection_priority"] = len(selected_features) + 1
+            selected_rows.append(row)
+            selected_features.append(feature_name)
+
+    selected = pd.DataFrame(selected_rows).sort_values(["range", "frequency_mhz"])
+    return selected[
+        [
+            "selection_priority",
+            "feature_name",
+            "range",
+            "frequency_mhz",
+            "feature_std",
+        ]
+    ].reset_index(drop=True)
+
+
+def _plot_correlation_heatmap(
+    correlation: pd.DataFrame,
+    feature_info: pd.DataFrame,
+    output_path: Path,
+) -> Path:
+    fig, ax = plt.subplots(figsize=(14, 11), constrained_layout=True)
     sns.heatmap(
         correlation,
         cmap="vlag",
@@ -373,7 +503,21 @@ def _plot_correlation_heatmap(correlation: pd.DataFrame, output_path: Path) -> P
         yticklabels=False,
         ax=ax,
     )
-    ax.set_title("Frequency feature correlation heatmap")
+    selected_info = feature_info.set_index("feature_name").loc[correlation.index]
+    tick_positions: list[int] = []
+    tick_labels: list[str] = []
+    for range_name, group in selected_info.reset_index().groupby("range", sort=False):
+        positions = [selected_info.index.get_loc(feature) for feature in group["feature_name"]]
+        tick_positions.append(int(np.mean(positions)))
+        min_mhz = group["frequency_mhz"].min()
+        max_mhz = group["frequency_mhz"].max()
+        tick_labels.append(f"{range_name}\n{min_mhz:.0f}-{max_mhz:.0f}MHz")
+
+    ax.set_xticks(tick_positions)
+    ax.set_xticklabels(tick_labels, rotation=0)
+    ax.set_yticks(tick_positions)
+    ax.set_yticklabels(tick_labels, rotation=0)
+    ax.set_title("Frequency feature correlation heatmap, sampled across full spectrum")
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
     return output_path
