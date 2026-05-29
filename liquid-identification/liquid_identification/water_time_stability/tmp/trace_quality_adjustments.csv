@@ -1,0 +1,22 @@
+sequence,raw_file,raw_points,valid_points_after_dbm_filter,filtered_invalid_points,reference_points,interpolated_to_reference_grid,excluded_from_stability_analysis,amplitude_filter
+91,000091_20260527_151231_339_trace1.csv,750,400,350,751,False,True,-200 <= amplitude <= 50
+96,000096_20260527_151256_358_trace1.csv,750,381,369,751,False,True,-200 <= amplitude <= 50
+98,000098_20260527_151306_344_trace1.csv,750,387,363,751,False,True,-200 <= amplitude <= 50
+124,000124_20260527_151516_357_trace1.csv,750,407,343,751,False,True,-200 <= amplitude <= 50
+132,000132_20260527_151556_348_trace1.csv,750,388,362,751,False,True,-200 <= amplitude <= 50
+171,000171_20260527_151911_344_trace1.csv,750,390,360,751,False,True,-200 <= amplitude <= 50
+175,000175_20260527_151931_337_trace1.csv,750,394,356,751,False,True,-200 <= amplitude <= 50
+292,000292_20260527_152916_334_trace1.csv,750,394,356,751,False,True,-200 <= amplitude <= 50
+320,000320_20260527_153136_324_trace1.csv,750,383,367,751,False,True,-200 <= amplitude <= 50
+335,000335_20260527_153251_326_trace1.csv,750,396,354,751,False,True,-200 <= amplitude <= 50
+336,000336_20260527_153256_320_trace1.csv,750,371,379,751,False,True,-200 <= amplitude <= 50
+395,000395_20260527_153751_316_trace1.csv,750,371,379,751,False,True,-200 <= amplitude <= 50
+442,000442_20260527_154146_312_trace1.csv,750,384,366,751,False,True,-200 <= amplitude <= 50
+475,000475_20260527_154431_315_trace1.csv,750,392,358,751,False,True,-200 <= amplitude <= 50
+479,000479_20260527_154451_314_trace1.csv,750,395,355,751,False,True,-200 <= amplitude <= 50
+557,000557_20260527_155121_316_trace1.csv,750,398,352,751,False,True,-200 <= amplitude <= 50
+577,000577_20260527_155301_307_trace1.csv,750,380,370,751,False,True,-200 <= amplitude <= 50
+580,000580_20260527_155316_308_trace1.csv,750,377,373,751,False,True,-200 <= amplitude <= 50
+666,000666_20260527_160026_294_trace1.csv,750,391,359,751,False,True,-200 <= amplitude <= 50
+690,000690_20260527_160226_308_trace1.csv,750,378,372,751,False,True,-200 <= amplitude <= 50
+693,000693_20260527_160241_297_trace1.csv,750,405,345,751,False,True,-200 <= amplitude <= 50

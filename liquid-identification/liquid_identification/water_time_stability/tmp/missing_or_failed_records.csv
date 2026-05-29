@@ -1,0 +1,2 @@
+sequence,captured_at,raw_file,status,file_exists,error
+642,2026-05-27 15:58:26.308,000642_20260527_155826_308_trace1.bin,parse_failed,True,invalid literal for int() with base 10: b'\x95'
